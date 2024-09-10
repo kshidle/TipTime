@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -55,6 +58,7 @@ fun TipTimeLayout() {
                     .padding(bottom = 16.dp, top = 40.dp)
                     .align(alignment = Alignment.Start)
             )
+            EditNumberField(modifier = Modifier.padding(bottom = 32.dp))
             Text(
                 text = stringResource(R.string.tip_amount, "$0.00"),
                 style = MaterialTheme.typography.displaySmall
@@ -62,6 +66,18 @@ fun TipTimeLayout() {
             Spacer(modifier = Modifier.height(150.dp))
         }
     }
+}
+
+@Composable
+fun EditNumberField(modifier: Modifier = Modifier) {
+    //represents state of text box, mutableStateOf allows change based on user input
+    var amountInput = mutableStateOf("0")
+    //create a text field that accepts user input
+    TextField(
+        value = amountInput.value,
+        onValueChange = {amountInput.value = it},
+        modifier = modifier
+    )
 }
 
 
