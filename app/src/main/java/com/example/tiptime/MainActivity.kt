@@ -5,15 +5,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,7 +36,9 @@ import androidx.compose.ui.unit.dp
 import com.example.tiptime.ui.theme.TipTimeTheme
 import java.text.NumberFormat
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.Switch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,8 +61,12 @@ fun TipTimeLayout() {
         var amountInput by remember {mutableStateOf("")}
         // ?: Elvis operator -- if input is null, set value to 0.0
         val amount = amountInput.toDoubleOrNull() ?: 0.0
-        val tip = calculateTip(amount)
+        var tipInput by remember { mutableStateOf("")}
+        val tipPercent = tipInput.toDoubleOrNull() ?: 0.0
+        //can also do mutableStateOf for booleans
+        var roundUp by remember {mutableStateOf(false)}
 
+        val tip = calculateTip(amount, tipPercent, roundUp)
         Column(
             modifier = Modifier
                 .statusBarsPadding()
@@ -74,9 +84,32 @@ fun TipTimeLayout() {
             EditNumberField(
                 //amountInput is a state of EditNumberField, need to do state hoisting
                 //state hoisting: lift state from composable, makes stateless + usable in other composables
+                label = R.string.bill_amount,
+                //make keyboard a number keyboard to input digits only
+                //imeAction determines what the action button looks like (can do send, next, search, etc)
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
                 value = amountInput,
                 onValueChange = {amountInput = it},
                 modifier = Modifier.padding(bottom = 32.dp).fillMaxWidth()
+            )
+            //make another textfield for a custom tip value
+            EditNumberField(
+                label = R.string.how_was_the_service,
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done //different keyboards for different fields
+                ),
+                value = tipInput,
+                onValueChange = {tipInput = it},
+                modifier = Modifier.padding(bottom = 32.dp).fillMaxWidth()
+            )
+            RoundTheTipRow(
+                roundUp = roundUp,
+                onRoundUpChanged = {roundUp = it},
+                modifier = Modifier.padding(bottom = 10.dp)
             )
             Text(
                 text = stringResource(R.string.tip_amount, tip),
@@ -89,16 +122,31 @@ fun TipTimeLayout() {
 
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun EditNumberField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+fun EditNumberField(@StringRes label: Int, keyboardOptions: KeyboardOptions, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
     TextField(
         value = value,
         onValueChange = onValueChange, //use parameter
-        label = { Text(stringResource(R.string.bill_amount))},
+        label = { Text(stringResource(label))},
         singleLine = true,
-        //make keyboard a number keyboard to input digits only
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = keyboardOptions,
         modifier = modifier
     )
+}
+
+@Composable
+fun RoundTheTipRow(roundUp: Boolean, onRoundUpChanged: (Boolean) -> Unit, modifier: Modifier = Modifier){
+    //make a switch to toggle within its own row
+    Row(
+        modifier = modifier.fillMaxWidth().size(48.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ){
+        Text(text = stringResource(R.string.round_up_tip))
+        Switch(
+            checked = roundUp,
+            onCheckedChange = onRoundUpChanged,
+            modifier = modifier.fillMaxWidth().wrapContentWidth(Alignment.End)
+        )
+    }
 }
 
 
@@ -108,9 +156,12 @@ fun EditNumberField(value: String, onValueChange: (String) -> Unit, modifier: Mo
  * Example would be "$10.00".
  */
 // changed tipPercent to 20 bc you should always tip 20% :)
-private fun calculateTip(amount: Double, tipPercent: Double = 20.0): String {
+private fun calculateTip(amount: Double, tipPercent: Double, roundUp: Boolean): String {
     //calculates tip: multiplies bill amount by tip percentage over 100
-    val tip = tipPercent / 100 * amount
+    var tip = tipPercent / 100 * amount
+    if(roundUp) {
+        tip = kotlin.math.ceil(tip)
+    }
     return NumberFormat.getCurrencyInstance().format(tip)
 }
 
